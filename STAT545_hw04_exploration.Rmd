@@ -1,0 +1,147 @@
+---
+title: "STAT545_hw04_exploration"
+output: github_document
+always_allow_html: yes
+---
+
+# Homework 04
+#### Author: Bassam Javed (github.com: _bassamjaved_)
+
+The following packages are required:
+
+```{r}
+library(gapminder)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+```
+
+## Data Reshaping Prompts
+### Activity #2
+
+**Make a tibble with one row per year and columns for life expectancy for two or more countries.**
+
+*Preamble*: I spread gapminder data by country to observe values for life expectancy. For simplicity, I use United States, India and China.
+
+```{r}
+A <- filter(gapminder, country == "United States" | country == "India" | country == "China") %>% 
+  mutate(lifeExp = round(lifeExp, 1)) %>% #Round to one digit for readability
+  transmute(country, year, lifeExp) #Remove columns not wanted for this analysis
+
+spread(A, key = "country", value = "lifeExp" ) %>% #Spread A by country with values of lifeExp
+  kable(caption = "Table 1: Life expectancy of China, India, and United States over time") %>% 
+  kable_styling(full_width = FALSE, bootstrap_options = "striped", position = "center") %>% 
+   add_header_above(c(" " = 1, "Country" = 3)) #Add header groupings. Value is column width.
+
+ggplot(A, aes(year, lifeExp)) + 
+  geom_point(aes(colour = country), shape = 10, size = 2) +
+  theme_classic() +
+  labs(title = "Figure 1: Life expectancy of China, India, and United States over time", 
+       x = "Year", 
+       y = "Life expectancy")
+
+```
+
+*Comments*: Using the newly created tibble A, it is easier to create the desired figure with ggplot since the data is already in the desired tidy form. There is no need to group the gapminder data by country and pass it into ggplot as this is already complete in A.
+
+
+### Activity #3
+
+**Compute some measure of life expectancy (mean? median? min? max?) for all possible combinations of continent and year. Reshape that to have one row per year and one variable for each continent.**
+
+*Preamble*: First, I create a new tibble B from gapminder that stores the mean of life expectancy, grouped by continent. I then spread B by continent to observe values for mean life expectancy.
+
+```{r}
+B <- gapminder %>% 
+  group_by(continent, year) %>% 
+  summarize(mu = round(mean(lifeExp),1))
+
+spread(B, key = "continent", value = "mu") %>% 
+  kable(caption = "Table 2: Mean life expectancy over time") %>% 
+  kable_styling(full_width = FALSE, bootstrap_options = "striped", position = "center") %>% 
+   add_header_above(c(" " = 1, "Continent" = 5)) #Add header groupings. Value is column width.
+
+ggplot(B, aes(year, mu)) + 
+  geom_point(aes(colour = continent), shape = 10, size = 2) +
+  theme_classic() +
+  labs(title = "Figure 2: Mean life expectancy over time", 
+       x = "Year", 
+       y = "Life expectancy")
+
+```
+*Comments*: As in Activity 2, using the newly created tibble B, it is easier to create the desired figure with ggplot since the data is already in the desired tidy form.
+
+
+## Join Prompts
+### Activity #1
+
+*Preamble*: First, I read in data courtest of GitHub.com user mledoze that contains various types of information on countries. I create a new tibble currency_data_raw that stores the values that I want to join to gapminder data. In this tibble, I rename the column "name" to "country" so that it matches gapminder. Using dplyr::anti_join(), I find which country names are mismatched in the two datasets. Visually comparing the two tibbles, I use str_replace to change the mismatched country names. Finally, I use left_join() to join the two tables.
+
+```{r}
+country_data <- read_csv("https://raw.githubusercontent.com/mledoze/countries/master/dist/countries.csv") #Import CSV data
+country_data
+
+currency_data_raw <- country_data %>% 
+  separate("name", into = c("country", letters), sep = ",") %>% 
+  select("country", "currency", "flag")
+
+C <- gapminder %>% #Let's choose one year of gapminder data for readability of the table
+  group_by(country) %>% 
+  filter(year == 2002) %>% 
+  select(country, continent, lifeExp, pop, gdpPercap)
+
+#left_join(C, currency_data, by = "country")
+#right_join(C, currency_data, by = "country")
+
+anti_join(C, currency_data_raw) #Check which "country" rows of C do not match with currency_data_untidy
+
+#inner_join(C, currency_data, by = "country")
+
+
+currency_data_clean <- currency_data_raw %>% 
+  mutate(country = str_replace(country, "Republic of the Congo", "Congo, Rep."),
+         country = str_replace(country, "DR Congo", "Congo, Dem. Rep."),
+         country = str_replace(country, "South Korea", "Korea, Rep."),
+         country = str_replace(country, "North Korea", "Korea, Dem. Rep."),
+         country = str_replace(country, "Hong Kong", "Hong Kong, China"),
+         country = str_replace(country, "Czechia", "Czech Republic"),
+         country = str_replace(country, "Ivory Coast", "Cote d'Ivoire"),
+         country = str_replace(country, "Réunion", "Reunion"),
+         country = str_replace(country, "São Tomé and Príncipe", "Sao Tome and Principe"),
+         country = str_replace(country, "Yemen", "Yemen, Rep."),
+         country = str_replace(country, "Slovakia", "Slovak Republic"))
+         #country = str_replace(country, "XXX", "Swaziland"), #not in the imported data frame
+         #country = str_replace(country, "YYY", "West Bank and Gaza")) #not in the imported data frame
+
+left_join(C, currency_data_clean, by = "country") %>% 
+  kable(caption = "Table 3: Gapminder addendum with currency and flags") %>% 
+  kable_styling(full_width = FALSE, bootstrap_options = "striped", position = "center") %>% 
+  add_header_above(c(" " = 5, "New stuff!" = 2))
+
+
+```
+*Comments*: For dplyr join prompts, specifying one table before the other sets the former as the basis of comparison. If I had used left_join() without renaming several of the countries, there would have been gaps in the data. If I had used inner_join(), the country rows that were mismatched would have been removed. In order to have a complete gapminder country list, I used anti_join with tibble C (the mutated gapminder copy) as the first argument. This allowed me to visually find which country rows were mismatched. Ultimately, there were two country rows that were not to be found in the imported data but are present in gapminder, so these must be accepted as gaps in the data.
+
+### Activity #3
+
+*Premable:* I compare the use of dplyr::left_join() and base::merge() for completing Activity 1.
+
+```{r}
+
+left_join(C, currency_data_clean, by = "country")
+
+right_join(C, currency_data_clean, by = "country")
+
+merge(C, currency_data_clean, by = "country")
+
+```
+
+*Comments:* base::merge() gives the same output as dplyr::left_join(). Although the output is the same, the underlying function is different. Since the data frames used in this example are relatively small, there is no observable difference in computation time. However, as the creator of dplyr notes [here](http://zevross.com/blog/2014/04/30/mini-post-for-large-tables-in-r-dplyrs-function-inner_join-is-much-faster-than-merge/), dplyr can perform the calculations with more efficiency.
+
+Reflections: 
+https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+http://zevross.com/blog/2014/04/30/mini-post-for-large-tables-in-r-dplyrs-function-inner_join-is-much-faster-than-merge/
+https://stackoverflow.com/questions/29271549/replace-all-occurrences-of-a-string-in-a-data-frame
+http://garrettgman.github.io/tidying/
+https://github.com/mledoze/countries/blob/master/dist/countries.csv
