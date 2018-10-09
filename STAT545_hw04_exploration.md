@@ -1055,6 +1055,7 @@ ggplot(B, aes(year, mu)) +
 ```
 
 ![](STAT545_hw04_exploration_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
 *Comments*: As in Activity 2, using the newly created tibble B, it is
 easier to create the desired figure with ggplot since the data is
 already in the desired tidy form.
@@ -8157,10 +8158,3 @@ is no observable difference in computation time. However, as the creator
 of dplyr notes
 [here](http://zevross.com/blog/2014/04/30/mini-post-for-large-tables-in-r-dplyrs-function-inner_join-is-much-faster-than-merge/),
 dplyr can perform the calculations with more efficiency.
-
-Reflections:
-<https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html>
-<http://zevross.com/blog/2014/04/30/mini-post-for-large-tables-in-r-dplyrs-function-inner_join-is-much-faster-than-merge/>
-<https://stackoverflow.com/questions/29271549/replace-all-occurrences-of-a-string-in-a-data-frame>
-<http://garrettgman.github.io/tidying/>
-<https://github.com/mledoze/countries/blob/master/dist/countries.csv>
